@@ -1,15 +1,17 @@
 import cv2
 import numpy as np
 
-from common.config import *
+from rx.config_rx import *
 from rx.sync import detectar_sync
 from rx.motion import detectar_cambio
-from rx.demodulation import demodular_frame
 from rx.geometry import erosionar_bits
-from rx.signal import es_pulso_valido 
+
 from rx.cuadrado import ordenar_esquinas
 
-cap = cv2.VideoCapture(VIDEO_FILE)
+from rx.signal import es_pulso_valido 
+from rx.demodulation import demodular_frame
+
+cap = cv2.VideoCapture(0)  #VIDEO_FILE)   #0) # cambiamos entre video archivo y camara*(0)
 
 
 def equalizar(gris):
@@ -19,8 +21,8 @@ def equalizar(gris):
                        [0, 1, 0]], dtype=np.uint8)
     
     gris = cv2.bilateralFilter(gris, 8, 170, 180)
-    
-    gris = cv2.medianBlur(gris, INDICE_BLUR)
+    gris = cv2.medianBlur(gris, 3)
+    #input("pausa")
     
     clahe = cv2.createCLAHE(clipLimit=4.3, tileGridSize=(4, 4))
     gris = clahe.apply(gris)
@@ -66,7 +68,7 @@ def encontrar_bandera_windows(diff, area_min=10000, area_max=50000):
     h, w = diff.shape
     area_total = h * w
     
-    kernel = np.ones((5, 5), np.uint8)
+    kernel = np.ones((4, 4), np.uint8)
     diff = cv2.morphologyEx(diff, cv2.MORPH_CLOSE, kernel, iterations=2)
 
     contours, _ = cv2.findContours(diff, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
