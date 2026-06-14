@@ -3,6 +3,8 @@ import sys
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
+print("hola ")
+
 def ejecutar(modulo):
     subprocess.run(
         [sys.executable, "-m", modulo],
