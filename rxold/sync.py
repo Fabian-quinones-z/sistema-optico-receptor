@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 
-#sync.py 
 def detectar_sync(gris):
 
     h,w = gris.shape

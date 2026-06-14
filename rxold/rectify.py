@@ -1,5 +1,3 @@
-#rectify.py
-
 import cv2
 
 
