@@ -5,3 +5,10 @@ matplotlib
 reedsolo
 tqdm
 scikit-image
+numpy
+scipy
+opencv-python
+matplotlib
+reedsolo
+tqdm
+scikit-image
