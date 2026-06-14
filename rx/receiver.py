@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from rx.config_rx import *
+from common.config import *
 from rx.sync import detectar_sync
 from rx.motion import detectar_cambio
 from rx.demodulation import demodular_frame
@@ -19,7 +19,8 @@ def equalizar(gris):
                        [0, 1, 0]], dtype=np.uint8)
     
     gris = cv2.bilateralFilter(gris, 8, 170, 180)
-    gris = cv2.medianBlur(gris, 3)
+    
+    gris = cv2.medianBlur(gris, INDICE_BLUR)
     
     clahe = cv2.createCLAHE(clipLimit=4.3, tileGridSize=(4, 4))
     gris = clahe.apply(gris)
