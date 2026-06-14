@@ -1,6 +1,6 @@
 import cv2
 
-def transmit_frames(frames, duration=500):
+def transmit_frames(frames, duration=300):
 
     cv2.namedWindow(
         "TX",
@@ -14,6 +14,7 @@ def transmit_frames(frames, duration=500):
     )
 
     for frame in frames:
+        #print("mostrando frame")
 
         cv2.imshow("TX", frame)
 

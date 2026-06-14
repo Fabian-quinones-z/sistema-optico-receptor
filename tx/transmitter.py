@@ -1,12 +1,11 @@
 import os
-import cv2
+import cv2  #analisis de imagenes
 
 from common.utils import text_to_bits
 from common.config import BITS_PER_FRAME
 from tx.frame_builder import build_frame
 from tx.display import transmit_frames
 from tx.control_frames import sync_a, sync_b
-
 
 message = """
 Hola modem optico
