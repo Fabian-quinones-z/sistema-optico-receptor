@@ -1,4 +1,4 @@
-import numpy as np
+gitgimport numpy as np
 from common.config import FRAME_SIZE
 
 def sync_a():
