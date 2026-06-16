@@ -1,20 +1,60 @@
-#rectify.py
-
 import cv2
+import numpy as np
+
+from common.config import *
 
 
-def rectify_frame(img, angulo):
+def ordenar_esquinas(pts):
 
-    h,w = img.shape[:2]
-
-    M = cv2.getRotationMatrix2D(
-        (w/2,h/2),
-        angulo,
-        1.0
+    pts = np.array(
+        pts,
+        dtype=np.float32
     )
 
-    return cv2.warpAffine(
-        img,
+    rect = np.zeros(
+        (4, 2),
+        dtype=np.float32
+    )
+
+    s = pts.sum(axis=1)
+
+    rect[0] = pts[np.argmin(s)]
+    rect[2] = pts[np.argmax(s)]
+
+    diff = np.diff(pts, axis=1)
+
+    rect[1] = pts[np.argmin(diff)]
+    rect[3] = pts[np.argmax(diff)]
+
+    return rect
+
+
+def rectificar(frame, cuadrado):
+
+    if cuadrado is None:
+        return None
+
+    pts = cuadrado.reshape(4, 2)
+
+    rect = ordenar_esquinas(pts)
+
+    dst = np.array(
+        [
+            [0, 0],
+            [RECTIFIED_SIZE - 1, 0],
+            [RECTIFIED_SIZE - 1, RECTIFIED_SIZE - 1],
+            [0, RECTIFIED_SIZE - 1]
+        ],
+        dtype=np.float32
+    )
+
+    M = cv2.getPerspectiveTransform(
+        rect,
+        dst
+    )
+
+    return cv2.warpPerspective(
+        frame,
         M,
-        (w,h)
+        (RECTIFIED_SIZE, RECTIFIED_SIZE)
     )

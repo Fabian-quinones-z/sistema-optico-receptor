@@ -438,36 +438,3 @@ def capturar_cuadrado(diff):
     if len(approx) == 4:
         return approx
     return None
-
-
-
-def detectar_lienzo(diff):
-
-    contours, _ = cv2.findContours(
-        diff,
-        cv2.RETR_EXTERNAL,
-        cv2.CHAIN_APPROX_SIMPLE
-    )
-
-    mejor = None
-    mejor_area = 0
-
-    for cnt in contours:
-
-        area = cv2.contourArea(cnt)
-
-        if area < 500:
-            continue
-
-        x,y,w,h = cv2.boundingRect(cnt)
-
-        if area > mejor_area:
-
-            mejor_area = area
-            mejor = (x,y,w,h)
-
-    print(
-        f"log recuadro area={mejor_area}"
-    )
-
-    return mejor

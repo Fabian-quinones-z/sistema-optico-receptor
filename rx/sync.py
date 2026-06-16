@@ -1,32 +1,115 @@
 import cv2
 import numpy as np
 
-#sync.py 
-def detectar_sync(gris):
 
-    h,w = gris.shape
+def detectar_sync(
+    estado0,
+    estado1,
+    area_min=8000):
+    print("sincronizando ")
+    """
+    Detecta los recuadros generados por:
 
-    h2 = h//2
-    w2 = w//2
+        Estado0 -> Estado1
 
-    q1 = np.mean(gris[0:h2,0:w2])
-    q2 = np.mean(gris[0:h2,w2:w])
+    Devuelve:
 
-    q3 = np.mean(gris[h2:h,0:w2])
-    q4 = np.mean(gris[h2:h,w2:w])
+    {
+        "diff": diff,
+        "mask": th,
+        "recuadros": [...],
+        "roi": (x,y,w,h)
+    }
+    """
 
-    #print(
-    #    f"Q={int(q1)},{int(q2)},{int(q3)},{int(q4)}"
-    #)
+    if estado0 is None:
+        return None
 
-    d1 = abs(q1-q4)
-    d2 = abs(q2-q3)
+    if estado1 is None:
+        return None
 
-    c1 = abs(q1-q2)
-    c2 = abs(q1-q3)
+    diff = cv2.absdiff(
+        estado0,
+        estado1
+    )
 
-    if d1 < 25 and d2 < 25:
-        if c1 > 30 and c2 > 30:
-            return "SYNC"
+    _, th = cv2.threshold(
+        diff,
+        20,
+        255,
+        cv2.THRESH_BINARY
+    )
 
-    return "DATA"
+    kernel = np.ones((5,5), np.uint8)
+
+    th = cv2.morphologyEx(
+        th,
+        cv2.MORPH_CLOSE,
+        kernel,
+        iterations=2
+    )
+
+    contours, _ = cv2.findContours(
+        th,
+        cv2.RETR_EXTERNAL,
+        cv2.CHAIN_APPROX_SIMPLE
+    )
+
+    recuadros = []
+
+    for cnt in contours:
+
+        area = cv2.contourArea(cnt)
+
+        if area < area_min:
+            continue
+
+        x,y,w,h = cv2.boundingRect(cnt)
+
+        recuadros.append({
+            "x": x,
+            "y": y,
+            "w": w,
+            "h": h,
+            "cx": x + w//2,
+            "cy": y + h//2,
+            "area": area
+        })
+
+    recuadros.sort(
+        key=lambda r: r["x"]
+    )
+
+    roi = None
+
+    if len(recuadros) >= 2:
+
+        izquierda = recuadros[0]
+        derecha   = recuadros[-1]
+
+        x1 = izquierda["x"] + izquierda["w"]
+        x2 = derecha["x"]
+
+        y1 = min(
+            izquierda["y"],
+            derecha["y"]
+        )
+
+        y2 = max(
+            izquierda["y"] + izquierda["h"],
+            derecha["y"] + derecha["h"]
+        )
+
+        roi = (
+            x1,
+            y1,
+            max(1, x2 - x1),
+            max(1, y2 - y1)
+        )
+
+    return {
+        "diff": diff,
+        "mask": th,
+        "recuadros": recuadros,
+        "roi": roi
+    }

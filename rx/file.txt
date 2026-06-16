@@ -1,0 +1,360 @@
+import cv2
+
+from common.config import *
+
+
+def equalizar(gris):
+
+    gris = cv2.bilateralFilter(
+        gris,
+        8,
+        170,
+        180
+    )
+
+    gris = cv2.medianBlur(
+        gris,
+        BLUR_SIZE
+    )
+
+    clahe = cv2.createCLAHE(
+        clipLimit=CLAHE_CLIP,
+        tileGridSize=CLAHE_GRID
+    )
+
+    gris = clahe.apply(gris)
+
+    gris = cv2.normalize(
+        gris,
+        None,
+        0,
+        255,
+        cv2.NORM_MINMAX
+    )
+
+    return gris
+
+
+def binarizar(gris):
+
+    if USE_OTSU:
+
+        _, binaria = cv2.threshold(
+            gris,
+            0,
+            255,
+            cv2.THRESH_BINARY + cv2.THRESH_OTSU
+        )
+
+    else:
+
+        _, binaria = cv2.threshold(
+            gris,
+            THRESHOLD_BINARIO,
+            255,
+            cv2.THRESH_BINARY
+        )
+
+    return binaria
+import cv2
+import numpy as np
+
+from common.config import *
+
+_referencia = None
+
+
+def guardar_referencia(frame):
+
+    global _referencia
+
+    _referencia = frame.copy()
+
+
+def obtener_referencia():
+
+    return _referencia
+
+
+def obtener_resta(frame):
+
+    global _referencia
+
+    if _referencia is None:
+        return None
+
+    return cv2.absdiff(
+        frame,
+        _referencia
+    )
+
+
+def encontrar_lienzo_por_resta(diff):
+
+    if diff is None:
+        return None
+
+    _, th = cv2.threshold(
+        diff,
+        20,
+        255,
+        cv2.THRESH_BINARY
+    )
+
+    kernel = np.ones((7, 7), np.uint8)
+
+    th = cv2.morphologyEx(
+        th,
+        cv2.MORPH_CLOSE,
+        kernel
+    )
+
+    contours, _ = cv2.findContours(
+        th,
+        cv2.RETR_EXTERNAL,
+        cv2.CHAIN_APPROX_SIMPLE
+    )
+
+    if not contours:
+        return None
+
+    mejor = None
+    mejor_area = 0
+
+    for cnt in contours:
+
+        area = cv2.contourArea(cnt)
+
+        if area < LIENZO_MIN_AREA:
+            continue
+
+        if area > LIENZO_MAX_AREA:
+            continue
+
+        peri = cv2.arcLength(
+            cnt,
+            True
+        )
+
+        approx = cv2.approxPolyDP(
+            cnt,
+            0.02 * peri,
+            True
+        )
+
+        if len(approx) != 4:
+            continue
+
+        if area > mejor_area:
+
+            mejor_area = area
+            mejor = approx
+
+    return mejor
+
+
+import cv2
+
+_frame_anterior = None
+
+
+def detectar_cambio(frame):
+
+    global _frame_anterior
+
+    if _frame_anterior is None:
+
+        _frame_anterior = frame.copy()
+
+        return 0, None
+
+    diff = cv2.absdiff(
+        frame,
+        _frame_anterior
+    )
+
+    score = int(diff.sum() / 255)
+
+    _frame_anterior = frame.copy()
+
+    return score, diff
+import cv2
+
+from common.config import *
+
+from rx.equalizador import equalizar
+from rx.equalizador import binarizar
+
+from rx.motion import detectar_cambio
+
+from rx.lienzo import guardar_referencia
+from rx.lienzo import obtener_resta
+from rx.lienzo import encontrar_lienzo_por_resta
+
+from rx.rectify import rectificar
+
+
+cap = cv2.VideoCapture(
+    VIDEO_FILE
+)
+
+referencia_guardada = False
+
+while True:
+
+    ret, frame = cap.read()
+
+    if not ret:
+        break
+
+    roi = frame[
+        ROI_Y1:ROI_Y2,
+        ROI_X1:ROI_X2
+    ]
+
+    roi = cv2.resize(
+        roi,
+        ROI_SIZE
+    )
+
+    gris = cv2.cvtColor(
+        roi,
+        cv2.COLOR_BGR2GRAY
+    )
+
+    gris = equalizar(gris)
+
+    binaria = binarizar(gris)
+
+    if not referencia_guardada:
+
+        guardar_referencia(binaria)
+
+        referencia_guardada = True
+
+        print("Referencia guardada")
+
+    resta = obtener_resta(binaria)
+
+    cuadrado = encontrar_lienzo_por_resta(
+        resta
+    )
+
+    rectificada = None
+
+    if cuadrado is not None:
+
+        rectificada = rectificar(
+            binaria,
+            cuadrado
+        )
+
+        cv2.drawContours(
+            roi,
+            [cuadrado],
+            -1,
+            (0,255,0),
+            2
+        )
+
+    cv2.imshow(
+        "ROI",
+        roi
+    )
+
+    cv2.imshow(
+        "BINARIA",
+        binaria
+    )
+
+    if resta is not None:
+
+        cv2.imshow(
+            "RESTA",
+            resta
+        )
+
+    if rectificada is not None:
+
+        cv2.imshow(
+            "RECTIFICADA",
+            rectificada
+        )
+
+    if cv2.waitKey(30) & 0xFF == 27:
+        break
+
+cap.release()
+
+cv2.destroyAllWindows()
+import cv2
+import numpy as np
+
+from common.config import *
+
+
+def ordenar_esquinas(pts):
+
+    pts = np.array(
+        pts,
+        dtype=np.float32
+    )
+
+    rect = np.zeros(
+        (4, 2),
+        dtype=np.float32
+    )
+
+    s = pts.sum(axis=1)
+
+    rect[0] = pts[np.argmin(s)]
+    rect[2] = pts[np.argmax(s)]
+
+    diff = np.diff(pts, axis=1)
+
+    rect[1] = pts[np.argmin(diff)]
+    rect[3] = pts[np.argmax(diff)]
+
+    return rect
+
+
+def rectificar(frame, cuadrado):
+
+    if cuadrado is None:
+        return None
+
+    pts = cuadrado.reshape(4, 2)
+
+    rect = ordenar_esquinas(pts)
+
+    dst = np.array(
+        [
+            [0, 0],
+            [RECTIFIED_SIZE - 1, 0],
+            [RECTIFIED_SIZE - 1, RECTIFIED_SIZE - 1],
+            [0, RECTIFIED_SIZE - 1]
+        ],
+        dtype=np.float32
+    )
+
+    M = cv2.getPerspectiveTransform(
+        rect,
+        dst
+    )
+
+    return cv2.warpPerspective(
+        frame,
+        M,
+        (RECTIFIED_SIZE, RECTIFIED_SIZE)
+    )
+import numpy as np
+
+
+def detectar_sync(diff):
+
+    if diff is None:
+        return False
+
+    pixeles = np.count_nonzero(diff)
+
+    return pixeles > 500
