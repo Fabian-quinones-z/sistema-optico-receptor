@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 
-<<<<<<< HEAD
 from common.config import *
 
 from rx.sync import detectar_sync
@@ -13,44 +12,11 @@ from rx.equalizador import *
 cap = cv2.VideoCapture(
     VIDEO_FILE
 )
-=======
-from rx.config_rx import *
-from rx.sync import detectar_sync
-from rx.motion import detectar_cambio
-from rx.geometry import erosionar_bits
-
-from rx.cuadrado import ordenar_esquinas
-
-from rx.signal import es_pulso_valido 
-from rx.demodulation import demodular_frame
-
-cap = cv2.VideoCapture(0)  #VIDEO_FILE)   #0) # cambiamos entre video archivo y camara*(0)
->>>>>>> 7e98f76dff979d5ab70aeda61bff2ab6b8b3f77b
 
 estado0 = None
 estado1 = None
 
-<<<<<<< HEAD
 sync_realizado = False
-=======
-def equalizar(gris):
-    """Versión optimizada para comunicación óptica"""
-    kernel = np.array([[1, 0, 1],
-                       [0, 1, 1],
-                       [0, 1, 0]], dtype=np.uint8)
-    
-    gris = cv2.bilateralFilter(gris, 8, 170, 180)
-    gris = cv2.medianBlur(gris, 3)
-    #input("pausa")
-    
-    clahe = cv2.createCLAHE(clipLimit=4.3, tileGridSize=(4, 4))
-    gris = clahe.apply(gris)
-    gris = cv2.morphologyEx(gris, cv2.MORPH_CLOSE, kernel)
-    
-    gris = cv2.normalize(gris, None, 30, 124, cv2.NORM_MINMAX)
-    
-    return gris
->>>>>>> 7e98f76dff979d5ab70aeda61bff2ab6b8b3f77b
 
 roi_lienzo = None
 
@@ -70,15 +36,7 @@ sync_realizado = False
 roi_lienzo = None
 lienzo_referencia = None
 
-<<<<<<< HEAD
 resta_canal = None
-=======
-    h, w = diff.shape
-    area_total = h * w
-    
-    kernel = np.ones((4, 4), np.uint8)
-    diff = cv2.morphologyEx(diff, cv2.MORPH_CLOSE, kernel, iterations=2)
->>>>>>> 7e98f76dff979d5ab70aeda61bff2ab6b8b3f77b
 
 mensaje_completo = ""
 maxScore=0
