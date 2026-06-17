@@ -1,145 +1,180 @@
 # Optical Modem
 
-Sistema de comunicación óptica pantalla-cámara (Screen-to-Camera Optical Communication).
+Sistema de comunicación óptica Screen-to-Camera (S2C) basado en transmisión de información digital mediante patrones luminosos mostrados en pantalla y capturados por una cámara convencional.
 
-El transmisor genera tramas binarias visuales mostradas en pantalla y el receptor recupera la información desde una cámara o un video previamente grabado.
+El sistema implementa sincronización visual, detección temporal de pulsos, localización automática del transmisor, rectificación geométrica y demodulación binaria para reconstrucción de mensajes.
 
----
+# Resumen
 
-# Estado actual
+El proyecto implementa un canal de comunicación óptica visible utilizando únicamente técnicas clásicas de visión por computador.
+
+La información es codificada en matrices binarias mostradas en una pantalla y posteriormente recuperada mediante una cámara o un archivo de video.
+
+El receptor fue diseñado para operar bajo:
+
+iluminación ambiente variable
+reflejos parciales
+desenfoque moderado
+bajo contraste
+pérdida parcial de bordes
+errores de captura por FPS limitados
+
+La detección se basa principalmente en:
+
+sincronización visual
+detección temporal de movimiento
+acumulación histórica de cambios
+extracción robusta de contornos
+rectificación mediante perspectiva
+
+# Estado Actual
 
 Implementado:
 
-* Generación de tramas 8x8.
-* 8 bytes (64 bits) por frame.
-* Generación automática de múltiples frames.
-* Preámbulo y postámbulo de sincronización.
-* Reproducción de frames por pantalla.
-* Captura desde cámara o video.
-* Selección de ROI.
-* Conversión a escala de grises.
-* Binarización fija u OTSU.
-* Detección de sincronización.
-* Detección de movimiento temporal.
-* Detección de líneas mediante Hough.
-* Estimación de ángulo dominante.
-* Rectificación geométrica.
+Generación de tramas 8x8.
+64 bits por frame.
+Conversión texto → bits.
+Generación automática de múltiples frames.
+Preámbulo y postámbulo de sincronización.
+Reproducción visual de tramas.
+Captura desde cámara o video.
+Selección de ROI.
+Ecualización adaptativa.
+Binarización fija y OTSU.
+Detección de sincronización.
+Detección temporal de pulsos.
+Acumulación histórica de movimiento.
+Localización automática del transmisor.
+Rectificación geométrica.
+Extracción de regiones cuadradas.
+Demodulación básica de bits.
 
 Pendiente:
 
-* Demodulación completa 8x8.
-* Reconstrucción de mensajes.
-* Corrección de errores.
-* Sincronización automática de frames.
-* Seguimiento dinámico de ROI.
+Corrección de errores.
+Reed-Solomon.
+CRC.
+Seguimiento dinámico del transmisor.
+Kalman Filter.
+Sincronización automática avanzada.
+Matrices 16x16 y 32x32.
+Optimización para transmisión en tiempo real.
 
----
+# Estructura del Proyecto
 
-# Estructura
+```
 
-```text
 optical_modem/
 
 ├── common/
-│   ├── coding.py
-│   ├── config.py
-│   └── utils.py
+│ ├── coding.py
+│ ├── config.py
+│ └── utils.py
 │
 ├── tx/
-│   ├── transmitter.py
-│   ├── frame_builder.py
-│   ├── display.py
-│   ├── control_frames.py
-│   ├── modulation.py
-│   └── protocol.py
+│ ├── transmitter.py
+│ ├── frame_builder.py
+│ ├── display.py
+│ ├── control_frames.py
+│ ├── modulation.py
+│ └── protocol.py
 │
 ├── rx/
-│   ├── receiver.py
-│   ├── sync.py
-│   ├── motion.py
-│   ├── geometry.py
-│   ├── rectify.py
-│   ├── demodulation.py
-│   └── config_rx.py
+│ ├── receiver.py
+│ ├── sync.py
+│ ├── motion.py
+│ ├── geometry.py
+│ ├── rectify.py
+│ ├── demodulation.py
+│ ├── signal.py
+│ └── config_rx.py
 │
 ├── scripts/
-│   ├── roi.py
-│   ├── detectar_pantalla.py
-│   ├── rectificar.py
-│   └── firma_horizontal.py
+│ ├── roi.py
+│ ├── detectar_pantalla.py
+│ ├── rectificar.py
+│ └── firma_horizontal.py
 │
 ├── tests/
 │
 ├── docs/
-│   └── muestra.mp4
+│ └── muestra.mp4
 │
 ├── outputs/
 │
 └── run.py
+
 ```
 
----
+# Protocolo de Transmisión
 
-# Protocolo de transmisión
+Cada trama contiene:
 
-Cada frame contiene:
+```
 
-```text
-8 x 8 = 64 bits
+8 × 8 = 64 bits
+
 ```
 
 equivalente a:
 
-```text
-8 bytes por frame
 ```
 
----
+8 bytes por frame
 
-# Sincronización
+```
+
+# Patrones de Sincronización
 
 Se utilizan dos patrones alternados.
 
 SYNC_A
 
-```text
+```
+
 xo
 ox
+
 ```
 
 SYNC_B
 
-```text
+```
+
 ox
 xo
+
 ```
 
 donde:
 
-```text
-o = bloque blanco
-x = bloque negro
 ```
 
-Cada bloque ocupa:
+o = blanco
+x = negro
 
-```text
-4x4 bits
 ```
 
-por lo que el patrón completo ocupa:
+Cada cuadrante ocupa:
 
-```text
-8x8 bits
 ```
 
-igual que un frame de datos.
+4 × 4 bits
 
----
+```
 
-# Estructura de transmisión
+Por tanto:
 
-```text
+```
+
+SYNC = 8 × 8 bits
+
+```
+
+# Estructura de una Transmisión
+
+```
+
 SYNC_A
 SYNC_B
 SYNC_A
@@ -154,228 +189,465 @@ SYNC_A
 SYNC_B
 SYNC_A
 SYNC_B
+
 ```
 
----
+# Arquitectura General
 
-# Pipeline del transmisor
-
-```text
-Mensaje
-   │
-   ▼
-text_to_bits()
-   │
-   ▼
-build_frame()
-   │
-   ▼
-frames[]
-   │
-   ▼
-transmit_frames()
-   │
-   ▼
-Pantalla
 ```
 
----
-
-# Pipeline del receptor
-
-```text
-FRAME
- │
- ▼
-ROI
- │
- ▼
-GRIS
- │
- ▼
-BINARIA
- │
- ├── detectar_sync()
- │
- ├── detectar_cambio()
- │
- ├── detectar_lineas()
- │
- ├── angulo_dominante()
- │
- └── rectify_frame()
- │
- ▼
-DEMODULADOR
- │
- ▼
 MENSAJE
+│
+▼
+TEXT_TO_BITS
+│
+▼
+FRAME_BUILDER
+│
+▼
+DISPLAY
+│
+▼
+PANTALLA
+│
+▼
+CÁMARA
+│
+▼
+ROI
+│
+▼
+GRIS
+│
+▼
+CLAHE
+│
+▼
+BINARIA
+│
+▼
+DETECCIÓN TEMPORAL
+│
+▼
+LOCALIZACIÓN
+│
+▼
+RECTIFICACIÓN
+│
+▼
+DEMODULACIÓN
+│
+▼
+MENSAJE
+
 ```
 
----
+# Pipeline del Transmisor
 
-# Detección de sincronización
+```
 
-El receptor calcula medias por cuadrante:
+Mensaje
+│
+▼
+text_to_bits()
+│
+▼
+build_frame()
+│
+▼
+frames[]
+│
+▼
+transmit_frames()
+│
+▼
+Pantalla
 
-```text
+```
+
+# Pipeline del Receptor
+
+```
+
+FRAME
+│
+▼
+ROI
+│
+▼
+GRIS
+│
+▼
+CLAHE
+│
+▼
+BINARIA
+│
+├── detectar_sync()
+│
+├── detectar_cambio()
+│
+├── detectar_lineas()
+│
+├── angulo_dominante()
+│
+└── rectify_frame()
+│
+▼
+DEMODULADOR
+│
+▼
+MENSAJE
+
+```
+
+# Preprocesamiento
+
+Cada imagen es convertida inicialmente a escala de grises.
+
+Posteriormente se aplica:
+
+```
+
+bilateralFilter()
+medianBlur()
+CLAHE()
+normalize()
+
+```
+
+Objetivos:
+
+reducción de ruido
+preservación de bordes
+compensación de iluminación
+aumento de contraste local
+
+# Ecualización Adaptativa
+
+El receptor utiliza CLAHE.
+
+```
+
+Contrast Limited Adaptive Histogram Equalization
+
+```
+
+La ecualización local permite recuperar regiones deterioradas por:
+
+brillo ambiente
+reflejos
+iluminación desigual
+saturación parcial
+
+Proceso:
+
+```
+
+gris
+↓
+CLAHE
+↓
+realce local
+↓
+bordes recuperados
+
+```
+
+# Detección de Sincronización
+
+La sincronización se basa en medias por cuadrante.
+
+```
+
 Q1 Q2
 
 Q3 Q4
+
 ```
 
-y verifica:
+Se verifica:
 
-```text
+```
+
 Q1 ≈ Q4
 
 Q2 ≈ Q3
 
 Q1 ≠ Q2
+
 ```
 
-para identificar:
+Lo que permite identificar:
 
-```text
+```
+
 xo
 ox
+
 ```
 
 u
 
-```text
+```
+
 ox
 xo
+
 ```
 
----
+# Detección Temporal de Pulsos
 
-# Detección temporal
+La detección temporal utiliza:
 
-El módulo:
-
-```text
-rx/motion.py
 ```
 
-realiza:
+diff = abs(frame_actual - frame_anterior)
 
-```text
-frame_actual - frame_anterior
 ```
 
-mediante:
+implementado mediante:
 
-```python
+```
+
 cv2.absdiff()
+
 ```
 
-para detectar la alternancia:
+Posteriormente:
 
-```text
-SYNC_A ↔ SYNC_B
 ```
 
-que produce grandes cambios temporales.
+threshold()
+OR temporal
+acumulación histórica
 
----
-
-# Instalación
-
-Crear entorno virtual:
-
-```bash
-python3 -m venv venv
 ```
 
-Activar:
+# Memoria Temporal
 
-```bash
-source venv/bin/activate
+Se utiliza una ventana deslizante de diferencias.
+
 ```
 
-Instalar dependencias:
+historial =
 
-```bash
-pip install -r requirements.txt
-```
-
----
-
-# Ejecución rápida
-
-Menú principal:
-
-```bash
-venv/bin/python3 run.py
-```
-
----
-
-# Transmisor
-
-```bash
-venv/bin/python3 -m tx.transmitter
-```
-
----
-
-# Receptor
-
-```bash
-venv/bin/python3 -m rx.receiver
-```
-
----
-
-# Fuente de video
-
-Modificar:
-
-```python
-rx/config_rx.py
-```
-
-Para usar cámara:
-
-```python
-USE_CAMERA = True
-```
-
-Para usar archivo:
-
-```python
-USE_CAMERA = False
-VIDEO_FILE = "docs/muestra.mp4"
-```
-
----
-
-# Archivos generados
-
-Frames de datos:
-
-```text
-outputs/frame_000.png
-outputs/frame_001.png
-outputs/frame_002.png
+diff(t0)
+diff(t1)
+diff(t2)
 ...
+
 ```
 
----
+La acumulación se realiza mediante:
 
-# Próximo objetivo
-
-Implementar:
-
-```text
-rectificación automática
-+
-muestreo 8x8
-+
-demodulación binaria
-+
-reconstrucción ASCII
 ```
 
-para recuperar completamente el mensaje transmitido.
+acumulada =
+diff1 OR diff2 OR diff3 ...
+
+```
+
+Beneficios:
+
+persistencia visual
+robustez temporal
+tolerancia a FPS bajos
+detección de pulsos breves
+
+# Localización del Transmisor
+
+La localización se realiza sobre la imagen de diferencias acumuladas.
+
+Flujo:
+
+```
+
+diff
+↓
+close
+↓
+contornos
+↓
+contorno mayor
+↓
+minAreaRect()
+
+```
+
+El uso de:
+
+```
+
+cv2.minAreaRect()
+
+```
+
+permite detectar la pantalla incluso cuando:
+
+faltan esquinas
+existen líneas internas
+aparecen agujeros
+hay ruido significativo
+
+# Obtención del Cuadrilátero
+
+A partir del contorno dominante:
+
+```
+
+rect = cv2.minAreaRect(contorno)
+
+box = cv2.boxPoints(rect)
+
+```
+
+Se obtienen las cuatro esquinas del transmisor.
+
+# Rectificación Geométrica
+
+Se emplea:
+
+```
+
+getPerspectiveTransform()
+
+warpPerspective()
+
+```
+
+para transformar la pantalla a una forma cuadrada normalizada.
+
+Antes:
+
+```
+
+/ /
+/____/
+
+```
+
+Después:
+
+```
+
++-------+
+| |
+| |
+| |
++-------+
+
+```
+
+# Extracción de Bits
+
+La región rectificada se normaliza a:
+
+```
+
+200 × 200
+
+```
+
+Posteriormente se divide en una matriz:
+
+```
+
+8 × 8
+
+```
+
+Cada celda representa un bit.
+
+La intensidad media determina:
+
+```
+
+blanco = 1
+
+negro = 0
+
+```
+
+# Máquina de Estados
+
+El receptor implementa tres estados principales.
+
+# Estado 0
+
+```
+
+ESPERANDO_PRIMER_PULSO
+
+```
+
+Objetivo:
+
+localizar transmisor
+capturar geometría
+
+# Estado 1
+
+```
+
+ESPERANDO_3_PULSOS
+
+```
+
+Objetivo:
+
+validar inicio de transmisión
+
+# Estado 2
+
+```
+
+RECIBIENDO
+
+```
+
+Objetivo:
+
+recortar
+rectificar
+demodular
+reconstruir mensaje
+
+# Ventajas
+
+Tolerante a ruido.
+Tolerante a desenfoque.
+Tolerante a reflejos.
+Tolerante a pérdida parcial de bordes.
+No requiere marcadores fiduciales.
+Funciona con cámaras convencionales.
+Compatible con video grabado.
+Robusto frente a FPS reducidos.
+
+# Limitaciones
+
+Requiere contraste mínimo entre pantalla y fondo.
+Reflejos severos pueden ocultar esquinas.
+Pulsos extremadamente rápidos pueden perderse.
+Dependencia parcial de la selección de ROI.
+Sensible a movimientos bruscos de cámara.
+
+# Trabajo Futuro
+
+Kalman Filter.
+Seguimiento automático del transmisor.
+Corrección automática de exposición.
+Reed-Solomon.
+CRC.
+Sincronización basada en preámbulos extendidos.
+Estimación subpixel de esquinas.
+Modulación multinivel.
+Soporte 16×16 y 32×32.
+
+# Conclusiones
+
+El sistema desarrollado demuestra la viabilidad de implementar un canal de comunicación óptica visible utilizando exclusivamente técnicas clásicas de procesamiento digital de imágenes.
+
+La combinación de sincronización visual, detección temporal de pulsos, memoria de movimiento, extracción robusta de contornos y rectificación geométrica permite recuperar información digital incluso bajo condiciones de captura no ideales.
+
+La arquitectura obtenida constituye una base sólida para futuras investigaciones en comunicaciones ópticas Screen-to-Camera de bajo costo y alta portabilidad.
