@@ -6,6 +6,7 @@ from rx.motion import detectar_cambio
 from rx.demodulation import demodular_frame
 from rx.geometry import erosionar_bits, detectar_lienzo
 from rx.equalizador import *
+from rx.lienzo import crear_panel_control
 
 # ============================================================================
 # CONFIGURACIÓN DEL SISTEMA - AJUSTADA
@@ -223,30 +224,32 @@ while True:
     cv2.putText(debug, f"F={contadorframes}", (10,40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
     cv2.putText(debug, f"Sync={sync_realizado}", (10,60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
     
-    if roi_lienzo is not None:
-        x, y, w, h = roi_lienzo
-        cv2.rectangle(debug, (x,y), (x+w,y+h), (255,0,0), 2)
-        cv2.putText(debug, f"ROI {w}x{h}", (x,y-25), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,255), 2)
-        cv2.putText(debug, f"EST:{roi_estable}", (x,y+h+20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,0), 2)
-        cv2.putText(debug, "LIENZO", (x,y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0), 2)
+    # Crear el panel de control con todas las vistas
+    panel = crear_panel_control(
+        debug=debug,
+        binaria=binaria,
+        diff_mov=diff_mov,
+        lienzo_referencia=lienzo_referencia,
+        resta_canal=resta_canal,
+        roi_lienzo=roi_lienzo,
+        roi_estable=roi_estable,
+        sync_realizado=sync_realizado,
+        contadorframes=contadorframes,
+        score=score
+    )
 
-    
-    # Mostrar todas las ventanas
-    cv2.imshow("RECEPTOR", debug)
-    cv2.imshow("BINARIA", binaria)
-    
-    if diff_mov is not None:
-        cv2.imshow("MOVIMIENTO", diff_mov)
-    
-    if sync_realizado and lienzo_referencia is not None:
-        cv2.imshow("LIENZO", lienzo_referencia)
-        if resta_canal is not None and resta_canal.size > 0:
-            cv2.imshow("RESTA", resta_canal)
-    
+    # Mostrar el panel único
+    cv2.imshow("OPTICAL MODEM - CONTROL PANEL", panel)
+
+    # Si quieres guardar capturas del panel
+    if contadorframes % 100 == 0:
+        cv2.imwrite(f"panel_frame_{contadorframes}.png", panel)
+
     # 15. SALIR CON ESC
     tecla = cv2.waitKey(30)
     if tecla == 27:
         break
+
 
 # ============================================================================
 # RESULTADOS FINALES
